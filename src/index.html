@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Social Network Ethereum</title>
+
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <style>
+    th{
+      width:50%;
+    }
+    .postTable{
+      width: 100%;
+    }
+    .postTable td{
+      padding: 10px;
+    }
+    .postTable tr{
+      border-bottom: 1px solid #ddd;
+    }
+    .postTable th{
+      width: 20%;
+    }
+    </style>
+  </head>
+  <body>
+
+    <div id="status" style="position: absolute; left:10px;">
+      <h6 id="accountAddress"></h6>
+      <h6 id="userContractAddress"></h6>
+      <h6>Connected: <span id="isConnected"></span></h6>
+      <h6>Registered: <span id="isRegistered"></span></h6>
+      <h6>Logged in: <span id="isLogged"></span></h6>
+    </div>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-12 col-sm-8 col-sm-push-2">
+          <h1 class="text-center">Social Network Ethereum</h1>
+          <hr/>
+          <br/>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-xs-12 col-sm-8 col-sm-push-2">
+          <div align=center>
+            <button id="connect" onclick="App.initWeb3();" class="btn btn-primary">Connect</button>
+            <button id="register" onclick="App.register();" class="btn btn-primary">Register</button>
+            <button id="login" onclick="return App.login();" class="btn btn-primary">Login</button>
+            <button id="reload" onclick="App.render();" class="btn btn-primary">Reload</button>
+          </div>
+          <hr/>
+          <br/>
+        </div>
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Following</th>
+            <th scope="col">Users</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <table id="followingList">
+              </table>
+            </td>
+            <td>
+              <table id="usersList">
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Posts</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <table class="postTable" id="postsList">
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="row" id="addPostDiv">
+        <div class="col-xs-12 col-sm-8 col-sm-push-2">
+          <form align="center" onSubmit="App.addPost(); return false;">
+            <div class="form-group">
+              <input type="text" id="newPostText" placeholder="text"/><br>
+              <input type="file" id="contentToIpfs" placeholder="ipfs"/><br>
+            </div>
+            <button type="submit" class="btn btn-primary">Add post</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/ipfs.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/web3.min.js"></script>
+    <script src="js/truffle-contract.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
