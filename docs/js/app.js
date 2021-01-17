@@ -1,12 +1,29 @@
+Post = class Post{
+  constructor(author,content,ipfsLink,timeStamp){
+    this.author=author;
+    this.content=content;
+    this.ipfsLink=ipfsLink;
+    this.timeStamp=timeStamp;
+  }
+};
+
 App = {
   web3Provider: null,
   contracts: {},
   userContractInstance: null,
   isRegistered: false,
   ipfs: null,
+  posts: [],
+  showingStatus: true,
+
+  toggleStatus: function(){
+    App.showingStatus?$("#status").hide():$("#status").show();
+    App.showingStatus = !App.showingStatus;
+  },
 
   //functions called on connect button click
   connect: function() {
+    App.reset();
     App.initWeb3();
   },
 
@@ -54,6 +71,7 @@ App = {
 
   //functions called on register button click
   register: function() {
+    App.checkRegistration();
     App.accountManagerInstance.register().then(function() {
       App.checkRegistration();
     });
@@ -91,6 +109,18 @@ App = {
     });
   },
 
+  reset: function(){
+    App.web3Provider = null;
+    App.contracts = {};
+    App.userContractInstance = null;
+    App.isRegistered = false;
+    App.posts = [];
+    $("#postsList").html("");
+    $("#followingList").html("");
+    $("#usersList").html("");
+    App.render();
+  },
+
   //function called on reload button click or when UI needs to be updated
   render: function() {
     $("#accountAddress").html("Your account: " + App.account);
@@ -104,7 +134,6 @@ App = {
       $("#login").prop("disabled", true);
       $("#register").prop("disabled", true);
       $("#addPostDiv").hide();
-      return;
     } else {
       $("#isConnected").html("true");
       if (App.isRegistered && App.ipfs != null) {
@@ -126,34 +155,28 @@ App = {
       $("#addPostDiv").show();
     }
 
-    //render posts
-    App.userContractInstance.getPostsCount().then(async function(count) {
-      var postTemplate = "<br>";
-      for (var i = 0; i < count; i++) {
-        postTemplate = await App.userContractInstance.getPost(i).then(function(post) {
-          const ipfsHash = post[1];
-          var result = App.ipfs.cat(ipfsHash);
-          return result.next().then(function(r) {
-            var string = new TextDecoder("utf-8").decode(r.value);
-            var timestamp = getTimestampFormatted(post[2]);
-            return "<tr><th>" + timestamp + "</th><td>" + post[0] + "</td><td>" + string + "</td></tr>" + postTemplate;
-          }).catch(function(error) {
-            console.warn(error);
-          });
-        });
-      }
-      $("#postsList").html(postTemplate);
-    });
-
-    //render followings
+    App.showLoading(true);
+    //render followings and load their posts
+    App.posts = [];
     App.userContractInstance.getFollowingCount().then(async function(count) {
+      if(count == 0) {
+        $("#followingList").html("");
+        App.loadCurrentUserPosts();
+        return;
+      }
       var followingTemplate = "";
       var address;
-      for (var i = 0; i < count; i++) {
+      for (let i = 0; i < count; i++) {
         address = web3.toChecksumAddress(await App.userContractInstance.getFollowing(i));
         followingTemplate = '<tr><td><a href="" onclick="App.onUnfollow(\'' + address + '\'); return false;">' + address + "</a></td></tr>" + followingTemplate;
+        let countPosts = await App.contracts.User.at(address).getPostsCount();
+        for (let j = 0; j < countPosts; j++) {
+          let post = await App.contracts.User.at(address).getPost(j);
+          await App.pushPost(address,post);
+        }
       }
       $("#followingList").html(followingTemplate);
+      App.loadCurrentUserPosts();
     });
 
     //render users
@@ -172,14 +195,135 @@ App = {
     });
   },
 
+  loadCurrentUserPosts: function(){
+    //load current user posts
+    App.userContractInstance.getPostsCount().then(async function(count) {
+      for (var i = 0; i < count; i++) {
+        postTemplate = await App.userContractInstance.getPost(i).then(async function(post) {
+          await App.pushPost(App.userContractAddress,post);
+        });
+      }
+      App.showLoading(false);
+      App.renderPosts();
+    });
+  },
+
+  pushPost: async function(address,post){
+    var ipfsContent = "<td></td>";
+    let ipfsHash = post[1];
+    if(ipfsHash.length != 0){
+      for await(const dir of App.ipfs.ls(ipfsHash)){
+        debugger;
+        //controllo se allegato presente
+        filename=dir.name;
+        if(filename.length != 0){
+          ipfsContent = "<td class='attachment'><a href='https://ipfs.io/ipfs/" + ipfsHash +
+          "' target=_blank>" + filename + "</a></td>";
+        }
+        App.posts.push(new Post(address,post[0],ipfsContent,post[2]));
+      }
+    }
+    else{
+      App.posts.push(new Post(address,post[0],ipfsContent,post[2]));
+    }
+  },
+
+  renderPosts: async function(){
+    if(App.posts.length > 1) {
+      for(let i=0;i<App.posts.length-1;i++){
+        for(let j=1;j<App.posts.length;j++){
+          if(App.posts[j-1].timeStamp > App.posts[j].timeStamp){
+            let aux = App.posts[j];
+            App.posts[j] = App.posts[j-1];
+            App.posts[j-1] = aux;
+          }
+        }
+      }
+    }
+    //render posts
+    var postTemplate = "<br>";
+    var filename = "";
+    var previousAuthor = "";
+    var authorTemplate;
+    App.posts.forEach(async function(post, i) {
+      authorTemplate = "";
+      //conversione timestamp
+      var timestamp = getTimestampFormatted(post.timeStamp);
+
+      //controllo se l'autore del nuovo post e' diverso dal precedente e se non è il primo post
+      if(previousAuthor !== post.author && i != 0){
+        //autore diverso, allora inserisco la riga dell'autore per i post precedenti
+        if(previousAuthor === App.userContractAddress){
+          authorTemplate = "<tr><td class='author authorMe' colspan=3>" + previousAuthor + " - (this)</td></tr>";
+        }
+        else{
+          authorTemplate = "<tr><td class='author' colspan=3>" + previousAuthor + "</td></tr>";
+        }
+        postTemplate = authorTemplate + postTemplate;
+      }
+      //inserisco il nuovo post e l'eventuale aggiunta della riga autore va al passaggio successivo
+      postTemplate = "<tr><th class='timestamp'>" + timestamp + "</th><td class='content'>" + post.content +
+      "</td>" + post.ipfsLink + "</tr>" + postTemplate;
+
+      //se e' l'ultimo post devo aggiungere la riga dell'autore attuale
+      if(i == App.posts.length-1){
+        if(post.author === App.userContractAddress){
+          authorTemplate = "<tr><td class='author authorMe' colspan=3>" + post.author + " - (this)</td></tr>";
+        }
+        else{
+          authorTemplate = "<tr><td class='author' colspan=3>" + post.author + "</td></tr>";
+        }
+        postTemplate = authorTemplate + postTemplate;
+      }
+      //aggiorno per ciclo successivo
+      previousAuthor = post.author;
+      $("#postsList").html(postTemplate);
+    });
+  },
+
+  showLoading: function(isLoading){
+    if(isLoading){
+      $("#loading").show();
+      $("#postsList").hide();
+    }
+    else{
+      $("#loading").hide();
+      $("#postsList").show();
+    }
+  },
+
   //function called on add post button click
   addPost: async function() {
     if (App.userContractInstance == null) return;
     const newPostText = $("#newPostText").val();
-    const contentToIpfs = $("#contentToIpfs").val();
+    const files = $("#contentToIpfs").prop('files');
 
-    const result = await App.ipfs.add(contentToIpfs);
-    newPostIpfsHash = result.cid.string;
+    if(files.length == 0 && newPostText.length == 0) return;
+
+    if(files.length != 0) {
+      let file = files[0];
+
+      const reader = new FileReader();
+      reader.addEventListener('load', async function(event) {
+        const content = event.target.result;
+        const result = await App.ipfs.add(
+          [{
+            path: "/files/" + file.name,
+            content: content
+          }]
+        );
+        newPostIpfsHash = result.cid.string;
+        console.log(newPostIpfsHash);
+        App.sendAddPost(newPostText,newPostIpfsHash);
+      });
+      reader.readAsArrayBuffer(file);
+    }
+    else{
+      App.sendAddPost(newPostText, "");
+    }
+  },
+
+  sendAddPost: function(newPostText, newPostIpfsHash){
     var newPostTimestamp = "" + new Date().getTime();
     App.userContractInstance.addPost(newPostText, newPostIpfsHash, newPostTimestamp).then(function() {
       App.render();

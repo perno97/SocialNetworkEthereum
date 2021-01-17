@@ -43,14 +43,13 @@ contract User {
   }
 
   function addFollowing(address _follow) public onlyCreator{
-    require(_follow != owner);
+    require(_follow != owner && !isFollowing[_follow]);
     following[followingCount++] = _follow;
     isFollowing[_follow] = true;
   }
 
   function deleteFollowing(address _unfollow) public onlyCreator{
-    require(_unfollow != owner);
-    require(isFollowing[_unfollow]);
+    require(_unfollow != owner && isFollowing[_unfollow]);
     for(uint i=0;i<followingCount;i++){
       if(following[i] == _unfollow) {
         following[i] = following[--followingCount];

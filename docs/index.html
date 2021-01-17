@@ -17,20 +17,31 @@
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
     <style>
-    th{
-      width:50%;
+    .usersTable td{
+      width: 50%;
     }
     .postTable{
       width: 100%;
     }
+    .postTable th{
+      width: 50%;
+    }
     .postTable td{
       padding: 10px;
     }
-    .postTable tr{
-      border-bottom: 1px solid #ddd;
+    .postTable .timestamp{
+      padding-left: 30px;
     }
-    .postTable th{
-      width: 20%;
+    .postTable .author{
+      color: white;
+      border-left: 4px solid black;
+      background: #88b5dd;
+      font-size: 16px;
+    }
+    .postTable .authorMe{
+      font-weight: bold;
+      background: #337ab7;
+      color: white;
     }
     </style>
   </head>
@@ -56,63 +67,69 @@
       <div class="row">
         <div class="col-xs-12 col-sm-8 col-sm-push-2">
           <div align=center>
-            <button id="connect" onclick="App.initWeb3();" class="btn btn-primary">Connect</button>
-            <button id="register" onclick="App.register();" class="btn btn-primary">Register</button>
-            <button id="login" onclick="return App.login();" class="btn btn-primary">Login</button>
+            <button id="connect" onclick="App.connect();" class="btn btn-primary">Connect</button>
+            <button id="register" onclick="App.register();" class="btn btn-primary" disabled>Register</button>
+            <button id="login" onclick="return App.login();" class="btn btn-primary" disabled>Login</button>
             <button id="reload" onclick="App.render();" class="btn btn-primary">Reload</button>
+            <button id="statusToggle" onclick="App.toggleStatus();" class="btn btn-primary">Status</button>
           </div>
           <hr/>
           <br/>
         </div>
       </div>
 
-      <table class="table">
-        <thead>
-          <tr>
-            <th scope="col">Following</th>
-            <th scope="col">Users</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <table id="followingList">
-              </table>
-            </td>
-            <td>
-              <table id="usersList">
-              </table>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="row">
+        <table class="table usersTable">
+          <thead>
+            <tr>
+              <th scope="col">Following</th>
+              <th scope="col">Users</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <table id="followingList">
+                </table>
+              </td>
+              <td>
+                <table id="usersList">
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-      <table class="table">
-        <thead>
-          <tr>
-            <th scope="col">Posts</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <table class="postTable" id="postsList">
-              </table>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="row" id="addPostDiv">
-        <div class="col-xs-12 col-sm-8 col-sm-push-2">
-          <form align="center" onSubmit="App.addPost(); return false;">
-            <div class="form-group">
-              <input type="text" id="newPostText" placeholder="text"/><br>
-              <input type="file" id="contentToIpfs" placeholder="ipfs"/><br>
-            </div>
-            <button type="submit" class="btn btn-primary">Add post</button>
-          </form>
-        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Posts</th>
+            </tr>
+            <tr>
+              <td>
+                <div id="addPostDiv" hidden>
+                    <form class="form-inline" onSubmit="App.addPost(); return false;">
+                      <button type="submit" class="btn btn-primary">Add post</button>
+                      <div class="form-group">
+                        <input type="text" id="newPostText" placeholder="text"/>
+                        <input type="file" id="contentToIpfs" placeholder="ipfs"/>
+                      </div>
+                    </form>
+                    <br>
+                </div>
+              </td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <table class="postTable" id="postsList">
+                </table>
+                <div id="loading" hidden><h3 align=center>Caricamento...</h3></div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
