@@ -1,4 +1,5 @@
-Post = class Post{
+//used storing and ordering posts
+class Post{
   constructor(author,content,ipfsLink,timeStamp){
     this.author=author;
     this.content=content;
@@ -16,6 +17,7 @@ App = {
   posts: [],
   showingStatus: true,
 
+  //shows or hides the status div on page
   toggleStatus: function(){
     App.showingStatus?$("#status").hide():$("#status").show();
     App.showingStatus = !App.showingStatus;
@@ -51,6 +53,7 @@ App = {
     return App.initContract();
   },
 
+  //loads contracts json files to initiate TruffleContract objects
   initContract: function() {
     $.getJSON("./contracts/User.json", function(user) {
       // Instantiate a new truffle contract from the artifact
@@ -77,6 +80,7 @@ App = {
     });
   },
 
+  //updates registered status
   checkRegistration: function() {
     App.contracts.AccountManager.deployed().then(function(instance) {
       App.accountManagerInstance = instance;
@@ -97,6 +101,7 @@ App = {
       }
     });
 
+    //saves an instance of current User contract in order to call contract's methods later
     App.contracts.AccountManager.deployed().then(function(instance) {
       App.accountManagerInstance = instance;
       App.accountManagerInstance.getThisUserAddress().then(function(address) {
@@ -109,6 +114,7 @@ App = {
     });
   },
 
+  //resets the UI and some state variables when clicking connect button
   reset: function(){
     App.web3Provider = null;
     App.contracts = {};
@@ -147,6 +153,7 @@ App = {
       }
     }
 
+    //show login button and posts if logged
     if (App.accountManagerInstance == null || App.userContractInstance == null) {
       $("#isLogged").html("false");
       return;
@@ -155,22 +162,25 @@ App = {
       $("#addPostDiv").show();
     }
 
+    //loading posts may take a moment, so a loading text is shown
     App.showLoading(true);
+
     //render followings and load their posts
     App.posts = [];
     App.userContractInstance.getFollowingCount().then(async function(count) {
-      if(count == 0) {
+      if(count == 0) {//if there are no followings then show only current user's posts
         $("#followingList").html("");
         App.loadCurrentUserPosts();
         return;
       }
       var followingTemplate = "";
       var address;
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < count; i++) {//get the address of each following
         address = web3.toChecksumAddress(await App.userContractInstance.getFollowing(i));
-        followingTemplate = '<tr><td><a href="" onclick="App.onUnfollow(\'' + address + '\'); return false;">' + address + "</a></td></tr>" + followingTemplate;
+        followingTemplate = '<tr><td><a href="" onclick="App.onUnfollow(\'' + address +
+        '\'); return false;">' + address + "</a></td></tr>" + followingTemplate;
         let countPosts = await App.contracts.User.at(address).getPostsCount();
-        for (let j = 0; j < countPosts; j++) {
+        for (let j = 0; j < countPosts; j++) {//load all posts of each following
           let post = await App.contracts.User.at(address).getPost(j);
           await App.pushPost(address,post);
         }
@@ -185,7 +195,7 @@ App = {
       var addressTemplate = "";
       for (var i = 0; i < count; i++) {
         userAddress = web3.toChecksumAddress(await App.accountManagerInstance.getUserAddress(i));
-        if (userAddress == App.userContractInstance.contract.address) {
+        if (userAddress == App.userContractInstance.contract.address) {//if it's current user's then add "- (this)"
           addressTemplate = "<tr><td>" + userAddress + " - (this)</td></tr>" + addressTemplate;
         } else {
           addressTemplate = '<tr><td><a href="" onclick="App.onFollow(\'' + userAddress + '\'); return false;">' + userAddress + "</a></td></tr>" + addressTemplate;
@@ -196,25 +206,23 @@ App = {
   },
 
   loadCurrentUserPosts: function(){
-    //load current user posts
     App.userContractInstance.getPostsCount().then(async function(count) {
       for (var i = 0; i < count; i++) {
         postTemplate = await App.userContractInstance.getPost(i).then(async function(post) {
           await App.pushPost(App.userContractAddress,post);
         });
       }
-      App.showLoading(false);
+      App.showLoading(false);//at this point all posts are loaded
       App.renderPosts();
     });
   },
 
+  //loads IPFS content if present, then stores a new Post object in posts array
   pushPost: async function(address,post){
     var ipfsContent = "<td></td>";
     let ipfsHash = post[1];
     if(ipfsHash.length != 0){
-      for await(const dir of App.ipfs.ls(ipfsHash)){
-        debugger;
-        //controllo se allegato presente
+      for await(const dir of App.ipfs.ls(ipfsHash)){//this part is executed asynchronously
         filename=dir.name;
         if(filename.length != 0){
           ipfsContent = "<td class='attachment'><a href='https://ipfs.io/ipfs/" + ipfsHash +
@@ -229,6 +237,7 @@ App = {
   },
 
   renderPosts: async function(){
+    //at this point all posts are loaded so they must be ordered by timestamp
     if(App.posts.length > 1) {
       for(let i=0;i<App.posts.length-1;i++){
         for(let j=1;j<App.posts.length;j++){
@@ -240,6 +249,7 @@ App = {
         }
       }
     }
+
     //render posts
     var postTemplate = "<br>";
     var filename = "";
@@ -247,40 +257,42 @@ App = {
     var authorTemplate;
     App.posts.forEach(async function(post, i) {
       authorTemplate = "";
-      //conversione timestamp
+      //conver timestamp into human readable date-time
       var timestamp = getTimestampFormatted(post.timeStamp);
 
-      //controllo se l'autore del nuovo post e' diverso dal precedente e se non è il primo post
+      //posts are rendered from the first to the last, from bottom to the top of the page, so
+      //if the post author changes then add the previousAuthor row
+      //if this is the first post, so at the bottom, then don't add a previousAuthor row, because there aren't previous posts
       if(previousAuthor !== post.author && i != 0){
-        //autore diverso, allora inserisco la riga dell'autore per i post precedenti
-        if(previousAuthor === App.userContractAddress){
+        if(previousAuthor === App.userContractAddress){//if this user is the author to render then use different style
           authorTemplate = "<tr><td class='author authorMe' colspan=3>" + previousAuthor + " - (this)</td></tr>";
         }
         else{
           authorTemplate = "<tr><td class='author' colspan=3>" + previousAuthor + "</td></tr>";
         }
-        postTemplate = authorTemplate + postTemplate;
+        postTemplate = authorTemplate + postTemplate;//add authorTemplate in front of postTemplate, to show it above the rest of the rows
       }
-      //inserisco il nuovo post e l'eventuale aggiunta della riga autore va al passaggio successivo
+      //add the post content row, the author will be added later
       postTemplate = "<tr><th class='timestamp'>" + timestamp + "</th><td class='content'>" + post.content +
       "</td>" + post.ipfsLink + "</tr>" + postTemplate;
 
-      //se e' l'ultimo post devo aggiungere la riga dell'autore attuale
+      //if this is the last post, then add the author row of the current post
       if(i == App.posts.length-1){
-        if(post.author === App.userContractAddress){
+        if(post.author === App.userContractAddress){//if this user is the author to render then use different style
           authorTemplate = "<tr><td class='author authorMe' colspan=3>" + post.author + " - (this)</td></tr>";
         }
         else{
           authorTemplate = "<tr><td class='author' colspan=3>" + post.author + "</td></tr>";
         }
-        postTemplate = authorTemplate + postTemplate;
+        postTemplate = authorTemplate + postTemplate;//add authorTemplate in front of postTemplate, to show it above the rest of the rows
       }
-      //aggiorno per ciclo successivo
+      //update previousAuthor for next cycle and UI
       previousAuthor = post.author;
       $("#postsList").html(postTemplate);
     });
   },
 
+  //switch showing loading text/showing posts
   showLoading: function(isLoading){
     if(isLoading){
       $("#loading").show();
@@ -294,35 +306,35 @@ App = {
 
   //function called on add post button click
   addPost: async function() {
-    if (App.userContractInstance == null) return;
+    if (App.userContractInstance == null) return;//stop if not logged
     const newPostText = $("#newPostText").val();
     const files = $("#contentToIpfs").prop('files');
 
-    if(files.length == 0 && newPostText.length == 0) return;
+    if(files.length == 0 && newPostText.length == 0) return;//stop if nothing to add
 
     if(files.length != 0) {
-      let file = files[0];
+      let file = files[0];//get the object representing the file to load
 
       const reader = new FileReader();
-      reader.addEventListener('load', async function(event) {
-        const content = event.target.result;
-        const result = await App.ipfs.add(
+      reader.addEventListener('load', async function(event) {//call this on file loaded
+        const content = event.target.result;//file content
+        const result = await App.ipfs.add(//add file to IPFS as member of a directory, so you can get filename later
           [{
             path: "/files/" + file.name,
             content: content
           }]
         );
         newPostIpfsHash = result.cid.string;
-        console.log(newPostIpfsHash);
         App.sendAddPost(newPostText,newPostIpfsHash);
       });
-      reader.readAsArrayBuffer(file);
+      reader.readAsArrayBuffer(file);//launch file reading
     }
-    else{
+    else{//if there's only text content and no attachment to add
       App.sendAddPost(newPostText, "");
     }
   },
 
+  //calls contract method for adding posts
   sendAddPost: function(newPostText, newPostIpfsHash){
     var newPostTimestamp = "" + new Date().getTime();
     App.userContractInstance.addPost(newPostText, newPostIpfsHash, newPostTimestamp).then(function() {
@@ -365,7 +377,7 @@ function getTimestampFormatted(timestamp) {
 //initialize ipfs and update UI at startup (disabling buttons)
 $(document).ready(function() {
   Ipfs.create({
-    repo: 'ipfs-' + Math.random()
+    repo: 'ipfs-' + Math.random()//create a repository with random name
   }).then(function(result) {
     App.ipfs = result;
   });
