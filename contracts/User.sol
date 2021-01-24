@@ -23,7 +23,7 @@ contract User {
   }
 
   //adds the specified code in every function using this modifier
-  modifier onlyCreator{
+  modifier onlyOwner{
     require(msg.sender == owner);
     _;//function's code will be placed at _
   }
@@ -33,7 +33,7 @@ contract User {
   }
 
   //the memory keyword tells to store the strings in volatile memory
-  function addPost(string memory _content, string memory _ipfsHash, string memory _timeStamp) public onlyCreator{
+  function addPost(string memory _content, string memory _ipfsHash, string memory _timeStamp) public onlyOwner{
     //adds a Post variable to the mapping while incrementing the index
     //storage keyword tells to save the mapping in account's persistent storage
     //creating mappings in volatile memory is prohibited in this version of solidity
@@ -58,14 +58,14 @@ contract User {
     return following[_index];
   }
 
-  function addFollowing(address _follow) public onlyCreator{
+  function addFollowing(address _follow) public onlyOwner{
     //can't follow myself and must not be already following
     require(_follow != owner && !isFollowing[_follow]);
     following[followingCount++] = _follow;
     isFollowing[_follow] = true;
   }
 
-  function deleteFollowing(address _unfollow) public onlyCreator{
+  function deleteFollowing(address _unfollow) public onlyOwner{
     //can't unfollow myself and must be following to unfollow
     require(_unfollow != owner && isFollowing[_unfollow]);
     for(uint i=0;i<followingCount;i++){
@@ -96,7 +96,7 @@ contract User {
     return followingCount;
   }
 
+  //executed when contract called with empty call data
+  //for example to receive ether with plain transactions
   receive () external payable {}
-
-  fallback () external payable {}
 }

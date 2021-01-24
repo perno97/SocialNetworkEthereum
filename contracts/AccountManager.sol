@@ -12,7 +12,6 @@ contract AccountManager {
   //mapping of all possible addresses to a boolean value
   //the default boolean value result is false
   mapping(address => bool) registered;
-
   //storing this contract's owner address
   address payable owner;
 
@@ -21,12 +20,16 @@ contract AccountManager {
   }
 
   function register() public {
-    require(!registered[msg.sender]);//user can't register if already registered
+    //user can't register if already registered
+    require(!registered[msg.sender]);
     //creates new User contract, generating its address from sender address
     User u = (new User(msg.sender));
-    users[msg.sender] = address(u);//add the new mapping user-User contract
-    usersList[usersCount++]=address(u);//add the contract address in the list
-    registered[msg.sender] = true;//set this user address as registered
+    //add the new mapping user-User contract
+    users[msg.sender] = address(u);
+    //add the contract address in the list
+    usersList[usersCount++]=address(u);
+    //set this user address as registered
+    registered[msg.sender] = true;
   }
 
   function isSenderRegistered() public view returns (bool){
@@ -49,6 +52,4 @@ contract AccountManager {
   }
 
   receive () external payable {}
-
-  fallback () external payable{}
 }

@@ -257,7 +257,7 @@ App = {
     var authorTemplate;
     App.posts.forEach(async function(post, i) {
       authorTemplate = "";
-      //conver timestamp into human readable date-time
+      //convert timestamp into human readable date-time
       var timestamp = getTimestampFormatted(post.timeStamp);
 
       //posts are rendered from the first to the last, from bottom to the top of the page, so
