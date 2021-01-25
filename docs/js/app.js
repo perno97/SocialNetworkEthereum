@@ -371,7 +371,7 @@ function getTimestampFormatted(timestamp) {
   if (min < 10) min = '0' + min;
   if (sec < 10) sec = '0' + sec;
 
-  return mm + '/' + dd + '/' + yyyy + " - " + hour + ":" + min + ":" + sec;
+  return dd + '/' + mm + '/' + yyyy + " - " + hour + ":" + min + ":" + sec;
 }
 
 //initialize ipfs and update UI at startup (disabling buttons)

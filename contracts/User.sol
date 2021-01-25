@@ -47,7 +47,7 @@ contract User {
   //the memory keyword tells to store the strings in volatile memory
   function getPost(uint _index) public view returns (string memory, string memory, string memory) {
     //index must be in interval and at least one post
-    require(postsCount > 0 && _index > 0 && _index < postsCount);
+    require(postsCount > 0 && _index >= 0 && _index < postsCount);
     Post memory p = posts[_index];
     return (p.content,p.ipfsHash,p.timeStamp);//single values can be loaded in memory
   }
